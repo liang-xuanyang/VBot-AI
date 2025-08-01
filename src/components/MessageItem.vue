@@ -127,7 +127,6 @@ export default {
 }
 
 .message-text :deep(pre) {
-  /* background: rgba(0, 0, 0, 0.1); */
   padding: 10px;
   border-radius: 6px;
   overflow-x: auto;
@@ -135,8 +134,6 @@ export default {
 }
 
 .message-text :deep(code) {
-  /* background: rgba(0, 0, 0, 0.1); */
-  /* padding: 2px 6px; */
   border-radius: 4px;
   font-family: "Courier New", monospace;
 }
