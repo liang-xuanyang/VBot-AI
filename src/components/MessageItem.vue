@@ -39,6 +39,8 @@
 
 <script>
 import { marked } from "marked";
+import hljs from "highlight.js";
+import "highlight.js/styles/github.css";
 
 export default {
   name: "MessageItem",
@@ -53,11 +55,80 @@ export default {
   },
   computed: {
     formattedContent() {
+      // 配置marked使用highlight.js进行代码高亮
+      const renderer = new marked.Renderer();
+      
+      // 自定义代码块渲染
+      renderer.code = function(code, language) {
+        const validLanguage = hljs.getLanguage(language) ? language : 'plaintext';
+        const highlightedCode = hljs.highlight(code, { language: validLanguage }).value;
+        
+        return `
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-language">${language || 'text'}</span>
+              <button class="copy-btn" onclick="copyCode(this)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="m5 15-4-4 4-4"></path>
+                  <path d="M5 15H9a2 2 0 0 0 2-2V9"></path>
+                </svg>
+                复制
+              </button>
+            </div>
+            <pre><code class="hljs ${validLanguage}">${highlightedCode}</code></pre>
+          </div>
+        `;
+      };
+
+      // 自定义行内代码渲染
+      renderer.codespan = function(code) {
+        return `<code class="inline-code">${code}</code>`;
+      };
+
       return marked(this.message.content, {
         breaks: true,
         gfm: true,
+        renderer: renderer,
       });
     },
+  },
+  mounted() {
+    // 添加全局复制函数
+    if (!window.copyCode) {
+      window.copyCode = function(button) {
+        const codeBlock = button.closest('.code-block');
+        const code = codeBlock.querySelector('code').textContent;
+        
+        navigator.clipboard.writeText(code).then(() => {
+          const originalText = button.innerHTML;
+          button.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20,6 9,17 4,12"></polyline>
+            </svg>
+            已复制
+          `;
+          button.style.color = '#52c41a';
+          
+          setTimeout(() => {
+            button.innerHTML = originalText;
+            button.style.color = '';
+          }, 2000);
+        }).catch(() => {
+          button.textContent = '复制失败';
+          setTimeout(() => {
+            button.innerHTML = `
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="m5 15-4-4 4-4"></path>
+                <path d="M5 15H9a2 2 0 0 0 2-2V9"></path>
+              </svg>
+              复制
+            `;
+          }, 2000);
+        });
+      };
+    }
   },
 };
 </script>
@@ -126,18 +197,98 @@ export default {
   word-wrap: break-word;
 }
 
-.message-text :deep(pre) {
+/* 代码块样式 */
+.message-text :deep(.code-block) {
+  margin: 16px 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e1e8ed;
+  background: #f8f9fa;
+}
+
+.message-text :deep(.code-header) {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  background: #f1f3f4;
+  border-bottom: 1px solid #e1e8ed;
+  font-size: 12px;
+}
+
+.message-text :deep(.code-language) {
+  color: #666;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.message-text :deep(.copy-btn) {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: transparent;
+  border: 1px solid #d0d7de;
+  border-radius: 4px;
+  color: #656d76;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.message-text :deep(.copy-btn:hover) {
+  background: #f3f4f6;
+  border-color: #8c959f;
+}
+
+.message-text :deep(.code-block pre) {
+  margin: 0;
+  padding: 16px;
+  background: #ffffff;
+  overflow-x: auto;
+  font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', monospace;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.message-text :deep(.code-block code) {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  font-family: inherit;
+}
+
+/* 行内代码样式 */
+.message-text :deep(.inline-code) {
+  background: #f6f8fa;
+  color: #d73a49;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', monospace;
+  font-size: 0.9em;
+  border: 1px solid #e1e4e8;
+}
+
+/* 覆盖默认的pre和code样式 */
+.message-text :deep(pre:not(.code-block pre)) {
   padding: 10px;
   border-radius: 6px;
   overflow-x: auto;
   margin: 10px 0;
+  background: #f6f8fa;
+  border: 1px solid #e1e4e8;
 }
 
-.message-text :deep(code) {
+.message-text :deep(code:not(.hljs):not(.inline-code)) {
+  background: #f6f8fa;
+  color: #d73a49;
+  padding: 2px 4px;
   border-radius: 4px;
-  font-family: "Courier New", monospace;
+  font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', monospace;
+  font-size: 0.9em;
 }
 
+/* 响应式设计 */
 @media (max-width: 768px) {
   .message-content {
     max-width: 85%;
@@ -146,6 +297,15 @@ export default {
   .ai-message .message-content {
     width: auto;
     max-width: 85%;
+  }
+  
+  .message-text :deep(.code-header) {
+    padding: 6px 12px;
+  }
+  
+  .message-text :deep(.code-block pre) {
+    padding: 12px;
+    font-size: 13px;
   }
 }
 </style>

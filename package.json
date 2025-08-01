@@ -9,6 +9,7 @@
     "serve": "http-server dist -p 8080"
   },
   "dependencies": {
+    "highlight.js": "^11.11.1",
     "marked": "^9.1.6",
     "vue": "^2.6.14"
   },
