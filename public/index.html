@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI 对话助手</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      /* 排除 MessageItem 组件内的所有元素 */
+      .message * {
+        margin: revert;
+        padding: revert;
+      }
+      /* 为 marked 生成的内容恢复默认样式 */
+      .message-content p {
+        margin: 1em 0;
+      }
+      .message-content h1, .message-content h2, .message-content h3, 
+      .message-content h4, .message-content h5, .message-content h6 {
+        margin: 1.2em 0 0.6em 0;
+        font-weight: bold;
+      }
+      .message-content ul, .message-content ol {
+        margin: 1em 0;
+        padding-left: 2em;
+      }
+      .message-content li {
+        margin: 0.5em 0;
+      }
+      .message-content blockquote {
+        margin: 1em 0;
+        padding-left: 1em;
+        border-left: 4px solid #ddd;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
+</html>
