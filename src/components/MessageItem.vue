@@ -22,7 +22,10 @@
     </div>
 
     <div class="message-content">
-      <div class="message-text" v-html="formattedContent"></div>
+      <!-- 用户消息保持基本格式（换行等），但不解析 Markdown -->
+      <div v-if="message.role === 'user'" class="message-text" v-html="userFormattedContent"></div>
+      <!-- AI 消息使用 Markdown 解析 -->
+      <div v-else class="message-text" v-html="formattedContent"></div>
     </div>
 
     <!-- 用户消息图标 -->
@@ -41,6 +44,7 @@
 import { marked } from "marked";
 import hljs from "highlight.js";
 import "highlight.js/styles/github.css";
+import DOMPurify from "dompurify";
 
 export default {
   name: "MessageItem",
@@ -53,71 +57,242 @@ export default {
       },
     },
   },
+  data() {
+    return {
+      // 缓存渲染器实例以提高性能
+      markedRenderer: null,
+      // 内容缓存
+      contentCache: new Map(),
+    };
+  },
   computed: {
+    // 用户消息格式化：保持换行和基本格式，但不解析 Markdown
+    userFormattedContent() {
+      if (!this.message || !this.message.content || typeof this.message.content !== "string") {
+        return "";
+      }
+
+      // 手动进行HTML转义，确保安全性
+      let safeContent = this.message.content
+        .replace(/&/g, "&amp;") // 先转义 &
+        .replace(/</g, "&lt;") // 转义 <
+        .replace(/>/g, "&gt;") // 转义 >
+        .replace(/"/g, "&quot;") // 转义 "
+        .replace(/'/g, "&#x27;"); // 转义 '
+
+      // 增强的格式化处理
+      safeContent = safeContent
+        // 将换行符转换为HTML换行标签
+        .replace(/\n/g, "<br>")
+        // 保留多个空格（可选：让用户的缩进更明显）
+        .replace(/  /g, "&nbsp;&nbsp;")
+        // 简单的URL链接识别（安全版本）
+        .replace(/(https?:\/\/[^\s<>"']+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+
+      return safeContent;
+    },
+
+    // AI消息格式化：完整的 Markdown 解析
     formattedContent() {
-      // 配置marked使用highlight.js进行代码高亮
-      const renderer = new marked.Renderer();
-      
-      // 自定义代码块渲染
-      renderer.code = function(code, language) {
-        const validLanguage = hljs.getLanguage(language) ? language : 'plaintext';
-        const highlightedCode = hljs.highlight(code, { language: validLanguage }).value;
-        
-        return `
-          <div class="code-block">
-            <div class="code-header">
-              <span class="code-language">${language || 'text'}</span>
-              <button class="copy-btn" onclick="copyCode(this)">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                  <path d="m5 15-4-4 4-4"></path>
-                  <path d="M5 15H9a2 2 0 0 0 2-2V9"></path>
-                </svg>
-                复制
-              </button>
-            </div>
-            <pre><code class="hljs ${validLanguage}">${highlightedCode}</code></pre>
-          </div>
-        `;
-      };
+      // 只有 AI 消息才需要 Markdown 解析
+      if (this.message.role !== "assistant") {
+        return "";
+      }
 
-      // 自定义行内代码渲染
-      renderer.codespan = function(code) {
-        return `<code class="inline-code">${code}</code>`;
-      };
+      // 边界情况检查
+      if (!this.message || !this.message.content || typeof this.message.content !== "string") {
+        return "";
+      }
 
-      return marked(this.message.content, {
-        breaks: true,
-        gfm: true,
-        renderer: renderer,
-      });
+      // 检查缓存
+      const cacheKey = this.message.content;
+      if (this.contentCache.has(cacheKey)) {
+        return this.contentCache.get(cacheKey);
+      }
+
+      try {
+        // 初始化渲染器（仅一次）
+        if (!this.markedRenderer) {
+          this.markedRenderer = new marked.Renderer();
+
+          // 自定义代码块渲染
+          this.markedRenderer.code = function (code, language) {
+            try {
+              // 安全的语言检查
+              const safeLang = language && typeof language === "string" ? language.trim() : "";
+              const validLanguage = safeLang && hljs.getLanguage(safeLang) ? safeLang : "plaintext";
+
+              // 安全的代码高亮
+              let highlightedCode;
+              try {
+                highlightedCode = hljs.highlight(code || "", { language: validLanguage }).value;
+              } catch (highlightError) {
+                console.warn("代码高亮失败:", highlightError);
+                // 如果高亮失败，使用原始代码但进行HTML转义
+                highlightedCode = DOMPurify.sanitize(code || "", { ALLOWED_TAGS: [] });
+              }
+
+              // 安全的显示语言
+              const displayLanguage = DOMPurify.sanitize(safeLang || "text", { ALLOWED_TAGS: [] });
+
+              return `
+                <div class="code-block">
+                  <div class="code-header">
+                    <span class="code-language">${displayLanguage}</span>
+                    <button class="copy-btn" onclick="copyCode(this)">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="m5 15-4-4 4-4"></path>
+                        <path d="M5 15H9a2 2 0 0 0 2-2V9"></path>
+                      </svg>
+                      复制
+                    </button>
+                  </div>
+                  <pre><code class="hljs ${validLanguage}">${highlightedCode}</code></pre>
+                </div>
+              `;
+            } catch (error) {
+              console.error("代码块渲染失败:", error);
+              // 降级处理：返回安全的简单代码块
+              const safeCode = DOMPurify.sanitize(code || "", { ALLOWED_TAGS: [] });
+              return `<pre><code>${safeCode}</code></pre>`;
+            }
+          };
+
+          // 自定义行内代码渲染
+          this.markedRenderer.codespan = function (code) {
+            try {
+              // 对行内代码进行安全处理
+              const safeCode = DOMPurify.sanitize(code || "", { ALLOWED_TAGS: [] });
+              return `<code class="inline-code">${safeCode}</code>`;
+            } catch (error) {
+              console.error("行内代码渲染失败:", error);
+              const safeCode = DOMPurify.sanitize(code || "", { ALLOWED_TAGS: [] });
+              return `<code>${safeCode}</code>`;
+            }
+          };
+        }
+
+        // 安全的Markdown解析配置
+        const result = marked(this.message.content, {
+          breaks: true,
+          gfm: true,
+          renderer: this.markedRenderer,
+          // 禁用HTML标签以提高安全性
+          sanitize: false, // marked v5+ 已移除此选项，需要手动处理
+          // 启用更严格的解析
+          pedantic: false,
+          smartLists: true,
+          smartypants: false,
+        });
+
+        // 使用DOMPurify进行最终的安全清理，允许常见的格式化标签
+        const sanitizedResult = DOMPurify.sanitize(result, {
+          ALLOWED_TAGS: [
+            "p",
+            "br",
+            "strong",
+            "em",
+            "u",
+            "del",
+            "s",
+            "strike",
+            "h1",
+            "h2",
+            "h3",
+            "h4",
+            "h5",
+            "h6",
+            "ul",
+            "ol",
+            "li",
+            "blockquote",
+            "a",
+            "img",
+            "table",
+            "thead",
+            "tbody",
+            "tr",
+            "th",
+            "td",
+            "pre",
+            "code",
+            "div",
+            "span",
+            "button",
+            "svg",
+            "rect",
+            "path",
+            "polyline",
+          ],
+          ALLOWED_ATTR: [
+            "href",
+            "title",
+            "alt",
+            "src",
+            "class",
+            "id",
+            "width",
+            "height",
+            "viewBox",
+            "fill",
+            "stroke",
+            "stroke-width",
+            "onclick",
+            "x",
+            "y",
+            "rx",
+            "ry",
+            "d",
+            "points",
+          ],
+          ALLOW_DATA_ATTR: false,
+        });
+
+        // 缓存结果（限制缓存大小）
+        if (this.contentCache.size > 100) {
+          const firstKey = this.contentCache.keys().next().value;
+          this.contentCache.delete(firstKey);
+        }
+        this.contentCache.set(cacheKey, sanitizedResult);
+
+        return sanitizedResult;
+      } catch (error) {
+        console.error("Markdown解析失败:", error);
+        // 降级处理：返回原始文本，但进行安全清理
+        const safeContent = DOMPurify.sanitize(this.message.content, { ALLOWED_TAGS: [] });
+        return safeContent.replace(/\n/g, "<br>");
+      }
     },
   },
   mounted() {
     // 添加全局复制函数
     if (!window.copyCode) {
-      window.copyCode = function(button) {
-        const codeBlock = button.closest('.code-block');
-        const code = codeBlock.querySelector('code').textContent;
-        
-        navigator.clipboard.writeText(code).then(() => {
-          const originalText = button.innerHTML;
-          button.innerHTML = `
+      window.copyCode = function (button) {
+        const codeBlock = button.closest(".code-block");
+        const code = codeBlock.querySelector("code").textContent;
+
+        navigator.clipboard
+          .writeText(code)
+          .then(() => {
+            const originalText = button.innerHTML;
+            button.innerHTML = `
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="20,6 9,17 4,12"></polyline>
             </svg>
             已复制
           `;
-          button.style.color = '#52c41a';
-          
-          setTimeout(() => {
-            button.innerHTML = originalText;
-            button.style.color = '';
-          }, 2000);
-        }).catch(() => {
-          button.textContent = '复制失败';
-          setTimeout(() => {
-            button.innerHTML = `
+            button.style.color = "#52c41a";
+
+            setTimeout(() => {
+              button.innerHTML = originalText;
+              button.style.color = "";
+            }, 2000);
+          })
+          .catch(() => {
+            button.textContent = "复制失败";
+            setTimeout(() => {
+              button.innerHTML = `
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                 <path d="m5 15-4-4 4-4"></path>
@@ -125,8 +300,8 @@ export default {
               </svg>
               复制
             `;
-          }, 2000);
-        });
+            }, 2000);
+          });
       };
     }
   },
@@ -182,6 +357,8 @@ export default {
   color: #495057;
   border: 1px solid #dee2e6;
   border-bottom-right-radius: 4px;
+  padding-top: 16px;
+  padding-bottom: 16px;
 }
 
 .ai-message .message-content {
@@ -219,7 +396,6 @@ export default {
 .message-text :deep(.code-language) {
   color: #666;
   font-weight: 500;
-  text-transform: uppercase;
 }
 
 .message-text :deep(.copy-btn) {
@@ -246,7 +422,7 @@ export default {
   padding: 16px;
   background: #ffffff;
   overflow-x: auto;
-  font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', monospace;
+  font-family: "SFMono-Regular", "Consolas", "Liberation Mono", "Menlo", monospace;
   font-size: 14px;
   line-height: 1.45;
 }
@@ -264,7 +440,7 @@ export default {
   color: #d73a49;
   padding: 2px 6px;
   border-radius: 4px;
-  font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', monospace;
+  font-family: "SFMono-Regular", "Consolas", "Liberation Mono", "Menlo", monospace;
   font-size: 0.9em;
   border: 1px solid #e1e4e8;
 }
@@ -284,7 +460,7 @@ export default {
   color: #d73a49;
   padding: 2px 4px;
   border-radius: 4px;
-  font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', monospace;
+  font-family: "SFMono-Regular", "Consolas", "Liberation Mono", "Menlo", monospace;
   font-size: 0.9em;
 }
 
@@ -298,11 +474,11 @@ export default {
     width: auto;
     max-width: 85%;
   }
-  
+
   .message-text :deep(.code-header) {
     padding: 6px 12px;
   }
-  
+
   .message-text :deep(.code-block pre) {
     padding: 12px;
     font-size: 13px;
