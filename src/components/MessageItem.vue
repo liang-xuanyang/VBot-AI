@@ -74,8 +74,8 @@ export default {
   },
   data() {
     return {
-      // 缓存渲染器实例以提高性能
-      markedRenderer: null,
+      // 标记是否已配置 marked
+      markedConfigured: false,
       // 内容缓存
       contentCache: new Map(),
     };
@@ -137,79 +137,85 @@ export default {
     // 处理 Markdown 内容
     processMarkdownContent(content) {
       try {
-        // 初始化渲染器（仅一次）
-        if (!this.markedRenderer) {
-          this.markedRenderer = new marked.Renderer();
+        // 使用 marked.use() 配置渲染器（仅一次）
+        if (!this.markedConfigured) {
+          marked.use({
+            renderer: {
+              // 自定义代码块渲染 - 新版本使用 token 对象
+              code(token) {
+                try {
+                  // 从 token 对象中获取代码和语言
+                  const code = token.text || "";
+                  const language = token.lang || "";
+                  console.log("language----", language);
+                  console.log("code----", code);
 
-          // 自定义代码块渲染
-          this.markedRenderer.code = function (code, language) {
-            try {
-              // 安全的语言检查
-              const safeLang = language && typeof language === "string" ? language.trim() : "";
-              const validLanguage = safeLang && hljs.getLanguage(safeLang) ? safeLang : "plaintext";
+                  // 安全的语言检查
+                  const safeLang = language && typeof language === "string" ? language.trim() : "";
+                  const validLanguage = safeLang && hljs.getLanguage(safeLang) ? safeLang : "plaintext";
 
-              // 安全的代码高亮
-              let highlightedCode;
-              try {
-                highlightedCode = hljs.highlight(code || "", { language: validLanguage }).value;
-              } catch (highlightError) {
-                console.warn("代码高亮失败:", highlightError);
-                // 如果高亮失败，使用原始代码但进行HTML转义
-                highlightedCode = DOMPurify.sanitize(code || "", { ALLOWED_TAGS: [] });
-              }
+                  // 安全的代码高亮
+                  let highlightedCode;
+                  try {
+                    highlightedCode = hljs.highlight(code, { language: validLanguage }).value;
+                  } catch (highlightError) {
+                    console.warn("代码高亮失败:", highlightError);
+                    // 如果高亮失败，使用原始代码但进行HTML转义
+                    highlightedCode = DOMPurify.sanitize(code, { ALLOWED_TAGS: [] });
+                  }
 
-              // 安全的显示语言
-              const displayLanguage = DOMPurify.sanitize(safeLang || "text", { ALLOWED_TAGS: [] });
+                  // 安全的显示语言
+                  const displayLanguage = DOMPurify.sanitize(safeLang || "text", { ALLOWED_TAGS: [] });
 
-              return `
-                <div class="code-block">
-                  <div class="code-header">
-                    <span class="code-language">${displayLanguage}</span>
-                    <button class="copy-btn" onclick="copyCode(this)">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                        <path d="m5 15-4-4 4-4"></path>
-                        <path d="M5 15H9a2 2 0 0 0 2-2V9"></path>
-                      </svg>
-                      复制
-                    </button>
-                  </div>
-                  <pre><code class="hljs ${validLanguage}">${highlightedCode}</code></pre>
-                </div>
-              `;
-            } catch (error) {
-              console.error("代码块渲染失败:", error);
-              // 降级处理：返回安全的简单代码块
-              const safeCode = DOMPurify.sanitize(code || "", { ALLOWED_TAGS: [] });
-              return `<pre><code>${safeCode}</code></pre>`;
-            }
-          };
+                  return `
+                    <div class="code-block">
+                      <div class="code-header">
+                        <span class="code-language">${displayLanguage}</span>
+                        <button class="copy-btn" onclick="copyCode(this)">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="m5 15-4-4 4-4"></path>
+                            <path d="M5 15H9a2 2 0 0 0 2-2V9"></path>
+                          </svg>
+                          复制
+                        </button>
+                      </div>
+                      <pre><code class="hljs ${validLanguage}">${highlightedCode}</code></pre>
+                    </div>
+                  `;
+                } catch (error) {
+                  console.error("代码块渲染失败:", error);
+                  // 降级处理：返回安全的简单代码块
+                  const safeCode = DOMPurify.sanitize(token.text || "", { ALLOWED_TAGS: [] });
+                  return `<pre><code>${safeCode}</code></pre>`;
+                }
+              },
 
-          // 自定义行内代码渲染
-          this.markedRenderer.codespan = function (code) {
-            try {
-              // 对行内代码进行安全处理
-              const safeCode = DOMPurify.sanitize(code || "", { ALLOWED_TAGS: [] });
-              return `<code class="inline-code">${safeCode}</code>`;
-            } catch (error) {
-              console.error("行内代码渲染失败:", error);
-              const safeCode = DOMPurify.sanitize(code || "", { ALLOWED_TAGS: [] });
-              return `<code>${safeCode}</code>`;
-            }
-          };
+              // 自定义行内代码渲染 - 新版本使用 token 对象
+              codespan(token) {
+                try {
+                  // 从 token 对象中获取代码
+                  const code = token.text || "";
+                  // 对行内代码进行安全处理
+                  const safeCode = DOMPurify.sanitize(code, { ALLOWED_TAGS: [] });
+                  return `<code class="inline-code">${safeCode}</code>`;
+                } catch (error) {
+                  console.error("行内代码渲染失败:", error);
+                  const safeCode = DOMPurify.sanitize(token.text || "", { ALLOWED_TAGS: [] });
+                  return `<code>${safeCode}</code>`;
+                }
+              },
+            },
+          });
+          this.markedConfigured = true;
         }
 
         // 安全的Markdown解析配置
-        const result = marked(content, {
+        const result = marked.parse(content, {
           breaks: true,
           gfm: true,
-          renderer: this.markedRenderer,
-          // 禁用HTML标签以提高安全性
-          sanitize: false, // marked v5+ 已移除此选项，需要手动处理
           // 启用更严格的解析
           pedantic: false,
-          smartLists: true,
-          smartypants: false,
         });
 
         // 使用DOMPurify进行最终的安全清理，允许常见的格式化标签
