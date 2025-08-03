@@ -1,74 +1,80 @@
 <template>
-  <div v-bind:class="['mermaid-container', { 'fullscreen': isFullscreen }]">
+  <div v-bind:class="['mermaid-container', { fullscreen: isFullscreen }]">
     <!-- 按钮工具栏 -->
     <div class="toolbar">
       <!-- 切换按钮 - 左侧 -->
       <div class="view-toggle">
-        <button
-          v-bind:class="['toggle-btn', { active: currentView === 'chart' }]"
-          v-on:click="switchView('chart')"
-        >
+        <button v-bind:class="['toggle-btn', { active: currentView === 'chart' }]" v-on:click="switchView('chart')">
           图表
         </button>
-        <button
-          v-bind:class="['toggle-btn', { active: currentView === 'code' }]"
-          v-on:click="switchView('code')"
-        >
+        <button v-bind:class="['toggle-btn', { active: currentView === 'code' }]" v-on:click="switchView('code')">
           代码
         </button>
       </div>
 
       <!-- 操作按钮 - 右侧 -->
       <div class="action-buttons">
-      <!-- 图表视图时显示的按钮 -->
-      <template v-if="currentView === 'chart'">
-        <button class="action-btn" v-on:click="zoomIn" title="放大">
+        <!-- 图表视图时显示的按钮 -->
+        <template v-if="currentView === 'chart'">
+          <button class="action-btn" v-on:click="zoomIn" title="放大">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+              <line x1="11" y1="8" x2="11" y2="14"></line>
+              <line x1="8" y1="11" x2="14" y2="11"></line>
+            </svg>
+          </button>
+          <button class="action-btn" v-on:click="zoomOut" title="缩小">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+              <line x1="8" y1="11" x2="14" y2="11"></line>
+            </svg>
+          </button>
+          <button class="action-btn" v-on:click="resetTransform" title="重置视图">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+              <path d="M21 3v5h-5"></path>
+              <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+              <path d="M3 21v-5h5"></path>
+            </svg>
+          </button>
+          <button class="action-btn" v-on:click="toggleFullscreen" v-bind:title="isFullscreen ? '退出全屏' : '全屏'">
+            <svg
+              v-if="!isFullscreen"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"
+              ></path>
+            </svg>
+            <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path
+                d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"
+              ></path>
+            </svg>
+          </button>
+        </template>
+
+        <!-- 所有视图都显示的按钮 -->
+        <button class="action-btn" v-on:click="copyCode" title="复制代码">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"></circle>
-            <path d="m21 21-4.35-4.35"></path>
-            <line x1="11" y1="8" x2="11" y2="14"></line>
-            <line x1="8" y1="11" x2="14" y2="11"></line>
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
           </svg>
         </button>
-        <button class="action-btn" v-on:click="zoomOut" title="缩小">
+        <button class="action-btn" v-on:click="downloadChart" title="下载图表">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"></circle>
-            <path d="m21 21-4.35-4.35"></path>
-            <line x1="8" y1="11" x2="14" y2="11"></line>
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7,10 12,15 17,10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
           </svg>
         </button>
-        <button class="action-btn" v-on:click="resetTransform" title="重置视图">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
-            <path d="M21 3v5h-5"></path>
-            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
-            <path d="M3 21v-5h5"></path>
-          </svg>
-        </button>
-        <button class="action-btn" v-on:click="toggleFullscreen" v-bind:title="isFullscreen ? '退出全屏' : '全屏'">
-          <svg v-if="!isFullscreen" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
-          </svg>
-          <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path>
-          </svg>
-        </button>
-      </template>
-      
-      <!-- 所有视图都显示的按钮 -->
-      <button class="action-btn" v-on:click="copyCode" title="复制代码">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-        </svg>
-      </button>
-      <button class="action-btn" v-on:click="downloadChart" title="下载图表">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-          <polyline points="7,10 12,15 17,10"></polyline>
-          <line x1="12" y1="15" x2="12" y2="3"></line>
-        </svg>
-      </button>
       </div>
     </div>
 
@@ -91,10 +97,10 @@
         v-on:mousemove="handleMouseMove"
         v-on:mouseup="handleMouseUp"
         v-on:mouseleave="handleMouseLeave"
-        v-bind:style="{ 
-          transform: 'scale(' + zoomLevel + ') translate(' + translateX + 'px, ' + translateY + 'px)', 
+        v-bind:style="{
+          transform: 'scale(' + zoomLevel + ') translate(' + translateX + 'px, ' + translateY + 'px)',
           transformOrigin: 'center center',
-          cursor: isDragging ? 'grabbing' : 'grab'
+          cursor: isDragging ? 'grabbing' : 'grab',
         }"
         v-html="renderedChart"
       ></div>
@@ -104,29 +110,27 @@
     <div v-if="currentView === 'code'" class="code-view">
       <pre class="code-content">{{ mermaidCode }}</pre>
     </div>
-
-
   </div>
 </template>
 
 <script>
-import mermaid from 'mermaid';
+import mermaid from "mermaid";
 
 export default {
-  name: 'MermaidChart',
+  name: "MermaidChart",
   props: {
     code: {
       type: String,
-      required: true
-    }
+      required: true,
+    },
   },
   data() {
     return {
-      currentView: 'chart', // 默认显示图表视图
-      renderedChart: '',
+      currentView: "chart", // 默认显示图表视图
+      renderedChart: "",
       isLoading: false,
       hasError: false,
-      errorMessage: '',
+      errorMessage: "",
       zoomLevel: 1,
       isFullscreen: false,
       chartId: `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -137,45 +141,45 @@ export default {
       dragStartX: 0,
       dragStartY: 0,
       startTranslateX: 0,
-      startTranslateY: 0
+      startTranslateY: 0,
     };
   },
   computed: {
     mermaidCode() {
       return this.code.trim();
-    }
+    },
   },
   mounted() {
     this.initMermaid();
     this.renderChart();
     // 监听ESC键退出全屏
-    document.addEventListener('keydown', this.handleKeydown);
+    document.addEventListener("keydown", this.handleKeydown);
   },
   beforeUnmount() {
     // 清理事件监听器
-    document.removeEventListener('keydown', this.handleKeydown);
+    document.removeEventListener("keydown", this.handleKeydown);
   },
   watch: {
     code() {
       this.renderChart();
-    }
+    },
   },
   methods: {
     initMermaid() {
       mermaid.initialize({
         startOnLoad: false,
-        theme: 'default',
+        theme: "default",
         themeVariables: {
-          primaryColor: '#c7d2fe',
-          primaryTextColor: '#6366f1',
-          primaryBorderColor: '#6366f1',
-          lineColor: '#6366f1',
-          secondaryColor: '#e0e7ff',
-          tertiaryColor: '#f1f5f9'
+          primaryColor: "#c7d2fe",
+          primaryTextColor: "#6366f1",
+          primaryBorderColor: "#6366f1",
+          lineColor: "#6366f1",
+          secondaryColor: "#e0e7ff",
+          tertiaryColor: "#f1f5f9",
         },
         flowchart: {
           htmlLabels: true,
-          curve: 'basis'
+          curve: "basis",
         },
         sequence: {
           diagramMarginX: 50,
@@ -186,24 +190,24 @@ export default {
           boxMargin: 10,
           boxTextMargin: 5,
           noteMargin: 10,
-          messageMargin: 35
-        }
+          messageMargin: 35,
+        },
       });
     },
     async renderChart() {
       if (!this.mermaidCode) return;
-      
+
       this.isLoading = true;
       this.hasError = false;
-      this.errorMessage = '';
-      
+      this.errorMessage = "";
+
       try {
         const { svg } = await mermaid.render(this.chartId, this.mermaidCode);
         this.renderedChart = svg;
       } catch (error) {
-        console.error('Mermaid渲染失败:', error);
+        console.error("Mermaid渲染失败:", error);
         this.hasError = true;
-        this.errorMessage = '图表渲染失败，请检查语法是否正确';
+        this.errorMessage = "图表渲染失败，请检查语法是否正确";
       } finally {
         this.isLoading = false;
       }
@@ -237,7 +241,7 @@ export default {
     handleWheel(event) {
       event.preventDefault();
       const delta = event.deltaY;
-      
+
       if (delta < 0) {
         // 向上滚动，放大
         if (this.zoomLevel < 2) {
@@ -253,7 +257,8 @@ export default {
       }
     },
     handleMouseDown(event) {
-      if (event.button === 0) { // 只处理左键
+      if (event.button === 0) {
+        // 只处理左键
         this.isDragging = true;
         this.dragStartX = event.clientX;
         this.dragStartY = event.clientY;
@@ -266,17 +271,16 @@ export default {
       if (this.isDragging) {
         const deltaX = event.clientX - this.dragStartX;
         const deltaY = event.clientY - this.dragStartY;
-        
+
         // 计算新的平移位置
         const newTranslateX = this.startTranslateX + deltaX / this.zoomLevel;
         const newTranslateY = this.startTranslateY + deltaY / this.zoomLevel;
-        
+
         // 获取容器尺寸来限制平移范围
         const container = this.$refs.chartContainer;
         if (container) {
-          const containerRect = container.parentElement.getBoundingClientRect();
           const maxTranslate = Math.max(0, (this.zoomLevel - 1) * 200); // 根据缩放级别动态调整最大平移距离
-          
+
           // 限制平移范围
           this.translateX = Math.max(-maxTranslate, Math.min(maxTranslate, newTranslateX));
           this.translateY = Math.max(-maxTranslate, Math.min(maxTranslate, newTranslateY));
@@ -284,7 +288,7 @@ export default {
           this.translateX = newTranslateX;
           this.translateY = newTranslateY;
         }
-        
+
         event.preventDefault();
       }
     },
@@ -301,104 +305,57 @@ export default {
     },
     handleKeydown(event) {
       // ESC键退出全屏
-      if (event.key === 'Escape' && this.isFullscreen) {
+      if (event.key === "Escape" && this.isFullscreen) {
         this.isFullscreen = false;
       }
     },
     async copyCode() {
       try {
         await navigator.clipboard.writeText(this.mermaidCode);
-        this.showCopySuccess();
-        this.$emit('copy-success', '代码已复制到剪贴板');
+        this.$emit("copy-success", "代码已复制到剪贴板");
       } catch (error) {
-        console.error('复制失败:', error);
-        this.$emit('copy-error', '复制失败，请手动复制');
+        console.error("复制失败:", error);
+        this.$emit("copy-error", "复制失败，请手动复制");
       }
-    },
-    showCopySuccess() {
-      // 创建临时提示元素
-      const toast = document.createElement('div');
-      toast.textContent = '复制成功！';
-      toast.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: #10b981;
-        color: white;
-        padding: 12px 20px;
-        border-radius: 6px;
-        font-size: 14px;
-        z-index: 10000;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        animation: slideInRight 0.3s ease-out;
-      `;
-      
-      // 添加动画样式
-      if (!document.querySelector('#copy-toast-style')) {
-        const style = document.createElement('style');
-        style.id = 'copy-toast-style';
-        style.textContent = `
-          @keyframes slideInRight {
-            from {
-              transform: translateX(100%);
-              opacity: 0;
-            }
-            to {
-              transform: translateX(0);
-              opacity: 1;
-            }
-          }
-        `;
-        document.head.appendChild(style);
-      }
-      
-      document.body.appendChild(toast);
-      
-      // 3秒后自动移除
-      setTimeout(() => {
-        if (toast.parentNode) {
-          toast.parentNode.removeChild(toast);
-        }
-      }, 3000);
     },
     downloadChart() {
       if (!this.renderedChart) return;
-      
+
       try {
         // 创建一个临时的SVG元素
-        const svgElement = document.createElement('div');
+        const svgElement = document.createElement("div");
         svgElement.innerHTML = this.renderedChart;
-        const svg = svgElement.querySelector('svg');
-        
+        const svg = svgElement.querySelector("svg");
+
         if (!svg) return;
-        
+
         // 获取SVG的尺寸
         const svgData = new XMLSerializer().serializeToString(svg);
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
         const img = new Image();
-        
+
         img.onload = () => {
           canvas.width = img.width;
           canvas.height = img.height;
-          ctx.fillStyle = '#ffffff';
+          ctx.fillStyle = "#ffffff";
           ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(img, 0, 0);
-          
+
           // 下载图片
-          const link = document.createElement('a');
+          const link = document.createElement("a");
           link.download = `mermaid-chart-${Date.now()}.png`;
-          link.href = canvas.toDataURL('image/png');
+          link.href = canvas.toDataURL("image/png");
           link.click();
         };
-        
-        img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+
+        img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
       } catch (error) {
-        console.error('下载失败:', error);
-        this.$emit('download-error', '下载失败，请重试');
+        console.error("下载失败:", error);
+        this.$emit("download-error", "下载失败，请重试");
       }
-    }
-  }
+    },
+  },
 };
 </script>
 
@@ -415,7 +372,7 @@ export default {
 
 /* 工具栏容器 */
 .toolbar {
-padding:8px;
+  padding: 8px;
   z-index: 10;
   display: flex;
   justify-content: space-between;
@@ -524,8 +481,12 @@ padding:8px;
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* 错误状态 */
@@ -556,7 +517,7 @@ padding:8px;
   color: #374151;
   padding: 16px;
   border-radius: 6px;
-  font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', monospace;
+  font-family: "SFMono-Regular", "Consolas", "Liberation Mono", "Menlo", monospace;
   font-size: 14px;
   line-height: 1.5;
   white-space: pre-wrap;
@@ -611,22 +572,22 @@ padding:8px;
     flex-wrap: wrap;
     gap: 4px;
   }
-  
+
   .action-btn {
     width: 28px;
     height: 28px;
   }
-  
+
   .toggle-btn {
     padding: 4px 8px;
     font-size: 11px;
   }
-  
+
   .chart-view,
   .code-view {
     padding: 55px 12px 12px;
   }
-  
+
   .toolbar {
     padding: 6px 8px;
   }

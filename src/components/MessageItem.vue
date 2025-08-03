@@ -27,8 +27,8 @@
       <!-- AI 消息使用 Markdown 解析 -->
       <div v-else class="message-text">
         <div v-for="(block, index) in contentBlocks" v-bind:key="index">
-          <MermaidChart 
-            v-if="block.type === 'mermaid'" 
+          <MermaidChart
+            v-if="block.type === 'mermaid'"
             v-bind:code="block.content"
             v-on:copy-success="handleCopySuccess"
             v-on:copy-error="handleCopyError"
@@ -113,251 +113,23 @@ export default {
       if (this.message.role !== "assistant") {
         return [];
       }
-
       // 边界情况检查
       if (!this.message || !this.message.content || typeof this.message.content !== "string") {
         return [];
       }
-
-      // 检查缓存
-      const cacheKey = this.message.content;
-      if (this.contentCache.has(cacheKey)) {
-        return this.contentCache.get(cacheKey);
-      }
-
       // 解析内容块
       const blocks = this.parseContentBlocks(this.message.content);
-      
-      // 缓存结果（限制缓存大小）
-      if (this.contentCache.size > 100) {
-        const firstKey = this.contentCache.keys().next().value;
-        this.contentCache.delete(firstKey);
-      }
-      this.contentCache.set(cacheKey, blocks);
-
       return blocks;
-    },
-
-    // AI消息格式化：完整的 Markdown 解析
-    formattedContent() {
-      // 只有 AI 消息才需要 Markdown 解析
-      if (this.message.role !== "assistant") {
-        return "";
-      }
-
-      // 边界情况检查
-      if (!this.message || !this.message.content || typeof this.message.content !== "string") {
-        return "";
-      }
-
-      // 检查缓存
-      const cacheKey = this.message.content;
-      if (this.contentCache.has(cacheKey)) {
-        return this.contentCache.get(cacheKey);
-      }
-
-      try {
-        // 初始化渲染器（仅一次）
-        if (!this.markedRenderer) {
-          this.markedRenderer = new marked.Renderer();
-
-          // 自定义代码块渲染
-          this.markedRenderer.code = function (code, language) {
-            try {
-              // 安全的语言检查
-              const safeLang = language && typeof language === "string" ? language.trim() : "";
-              const validLanguage = safeLang && hljs.getLanguage(safeLang) ? safeLang : "plaintext";
-
-              // 安全的代码高亮
-              let highlightedCode;
-              try {
-                highlightedCode = hljs.highlight(code || "", { language: validLanguage }).value;
-              } catch (highlightError) {
-                console.warn("代码高亮失败:", highlightError);
-                // 如果高亮失败，使用原始代码但进行HTML转义
-                highlightedCode = DOMPurify.sanitize(code || "", { ALLOWED_TAGS: [] });
-              }
-
-              // 安全的显示语言
-              const displayLanguage = DOMPurify.sanitize(safeLang || "text", { ALLOWED_TAGS: [] });
-
-              return `
-                <div class="code-block">
-                  <div class="code-header">
-                    <span class="code-language">${displayLanguage}</span>
-                    <button class="copy-btn" onclick="copyCode(this)">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                        <path d="m5 15-4-4 4-4"></path>
-                        <path d="M5 15H9a2 2 0 0 0 2-2V9"></path>
-                      </svg>
-                      复制
-                    </button>
-                  </div>
-                  <pre><code class="hljs ${validLanguage}">${highlightedCode}</code></pre>
-                </div>
-              `;
-            } catch (error) {
-              console.error("代码块渲染失败:", error);
-              // 降级处理：返回安全的简单代码块
-              const safeCode = DOMPurify.sanitize(code || "", { ALLOWED_TAGS: [] });
-              return `<pre><code>${safeCode}</code></pre>`;
-            }
-          };
-
-          // 自定义行内代码渲染
-          this.markedRenderer.codespan = function (code) {
-            try {
-              // 对行内代码进行安全处理
-              const safeCode = DOMPurify.sanitize(code || "", { ALLOWED_TAGS: [] });
-              return `<code class="inline-code">${safeCode}</code>`;
-            } catch (error) {
-              console.error("行内代码渲染失败:", error);
-              const safeCode = DOMPurify.sanitize(code || "", { ALLOWED_TAGS: [] });
-              return `<code>${safeCode}</code>`;
-            }
-          };
-        }
-
-        // 安全的Markdown解析配置
-        const result = marked(this.message.content, {
-          breaks: true,
-          gfm: true,
-          renderer: this.markedRenderer,
-          // 禁用HTML标签以提高安全性
-          sanitize: false, // marked v5+ 已移除此选项，需要手动处理
-          // 启用更严格的解析
-          pedantic: false,
-          smartLists: true,
-          smartypants: false,
-        });
-
-        // 使用DOMPurify进行最终的安全清理，允许常见的格式化标签
-        const sanitizedResult = DOMPurify.sanitize(result, {
-          ALLOWED_TAGS: [
-            "p",
-            "br",
-            "strong",
-            "em",
-            "u",
-            "del",
-            "s",
-            "strike",
-            "h1",
-            "h2",
-            "h3",
-            "h4",
-            "h5",
-            "h6",
-            "ul",
-            "ol",
-            "li",
-            "blockquote",
-            "a",
-            "img",
-            "table",
-            "thead",
-            "tbody",
-            "tr",
-            "th",
-            "td",
-            "pre",
-            "code",
-            "div",
-            "span",
-            "button",
-            "svg",
-            "rect",
-            "path",
-            "polyline",
-          ],
-          ALLOWED_ATTR: [
-            "href",
-            "title",
-            "alt",
-            "src",
-            "class",
-            "id",
-            "width",
-            "height",
-            "viewBox",
-            "fill",
-            "stroke",
-            "stroke-width",
-            "onclick",
-            "x",
-            "y",
-            "rx",
-            "ry",
-            "d",
-            "points",
-          ],
-          ALLOW_DATA_ATTR: false,
-        });
-
-        // 缓存结果（限制缓存大小）
-        if (this.contentCache.size > 100) {
-          const firstKey = this.contentCache.keys().next().value;
-          this.contentCache.delete(firstKey);
-        }
-        this.contentCache.set(cacheKey, sanitizedResult);
-
-        return sanitizedResult;
-      } catch (error) {
-        console.error("Markdown解析失败:", error);
-        // 降级处理：返回原始文本，但进行安全清理
-        const safeContent = DOMPurify.sanitize(this.message.content, { ALLOWED_TAGS: [] });
-        return safeContent.replace(/\n/g, "<br>");
-      }
     },
   },
   methods: {
-    // 解析内容块，识别 Mermaid 和普通内容
+    // 解析内容块
     parseContentBlocks(content) {
       const blocks = [];
-      const mermaidRegex = /```mermaid\n([\s\S]*?)\n```/g;
-      let lastIndex = 0;
-      let match;
-
-      while ((match = mermaidRegex.exec(content)) !== null) {
-        // 添加 Mermaid 块之前的普通内容
-        if (match.index > lastIndex) {
-          const beforeContent = content.slice(lastIndex, match.index);
-          if (beforeContent.trim()) {
-            blocks.push({
-              type: 'markdown',
-              content: this.processMarkdownContent(beforeContent)
-            });
-          }
-        }
-
-        // 添加 Mermaid 块
-        blocks.push({
-          type: 'mermaid',
-          content: match[1].trim()
-        });
-
-        lastIndex = match.index + match[0].length;
-      }
-
-      // 添加最后剩余的普通内容
-      if (lastIndex < content.length) {
-        const remainingContent = content.slice(lastIndex);
-        if (remainingContent.trim()) {
-          blocks.push({
-            type: 'markdown',
-            content: this.processMarkdownContent(remainingContent)
-          });
-        }
-      }
-
-      // 如果没有找到任何 Mermaid 块，处理整个内容为 Markdown
-      if (blocks.length === 0) {
-        blocks.push({
-          type: 'markdown',
-          content: this.processMarkdownContent(content)
-        });
-      }
+      blocks.push({
+        type: "markdown",
+        content: this.processMarkdownContent(content),
+      });
 
       return blocks;
     },
@@ -514,19 +286,19 @@ export default {
 
     // 处理复制成功事件
     handleCopySuccess(message) {
-      console.log('复制成功:', message);
+      console.log("复制成功:", message);
       // 可以在这里添加用户提示
     },
 
     // 处理复制错误事件
     handleCopyError(error) {
-      console.error('复制失败:', error);
+      console.error("复制失败:", error);
       // 可以在这里添加错误提示
     },
 
     // 处理下载错误事件
     handleDownloadError(error) {
-      console.error('下载失败:', error);
+      console.error("下载失败:", error);
       // 可以在这里添加错误提示
     },
   },
