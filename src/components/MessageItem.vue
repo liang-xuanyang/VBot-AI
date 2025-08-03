@@ -76,8 +76,6 @@ export default {
     return {
       // 标记是否已配置 marked
       markedConfigured: false,
-      // 内容缓存
-      contentCache: new Map(),
     };
   },
   computed: {
@@ -118,24 +116,14 @@ export default {
         return [];
       }
       // 解析内容块
-      const blocks = this.parseContentBlocks(this.message.content);
+      const blocks = this.processMarkdownContent(this.message.content);
       return blocks;
     },
   },
   methods: {
-    // 解析内容块
-    parseContentBlocks(content) {
-      const blocks = [];
-      blocks.push({
-        type: "markdown",
-        content: this.processMarkdownContent(content),
-      });
-
-      return blocks;
-    },
-
     // 处理 Markdown 内容
     processMarkdownContent(content) {
+      const blocks = [];
       try {
         // 使用 marked.use() 配置渲染器（仅一次）
         if (!this.markedConfigured) {
@@ -147,9 +135,6 @@ export default {
                   // 从 token 对象中获取代码和语言
                   const code = token.text || "";
                   const language = token.lang || "";
-                  console.log("language----", language);
-                  console.log("code----", code);
-
                   // 安全的语言检查
                   const safeLang = language && typeof language === "string" ? language.trim() : "";
                   const validLanguage = safeLang && hljs.getLanguage(safeLang) ? safeLang : "plaintext";
@@ -281,7 +266,8 @@ export default {
           ALLOW_DATA_ATTR: false,
         });
 
-        return sanitizedResult;
+        blocks.push({ type: "markdown", content: sanitizedResult });
+        return blocks;
       } catch (error) {
         console.error("Markdown解析失败:", error);
         // 降级处理：返回原始文本，但进行安全清理
