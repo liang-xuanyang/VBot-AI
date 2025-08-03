@@ -12,6 +12,7 @@
     "dompurify": "^3.2.6",
     "highlight.js": "^11.11.1",
     "marked": "^9.1.6",
+    "mermaid": "^11.9.0",
     "vue": "^2.6.14"
   },
   "devDependencies": {

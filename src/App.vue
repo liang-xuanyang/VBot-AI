@@ -51,7 +51,25 @@ export default {
     addWelcomeMessage() {
       this.messages.push({
         role: "assistant",
-        content: "您好！我是 AI 助手，很高兴为您服务。请问有什么可以帮助您的吗？",
+        content: `您好！我是 AI 助手，很高兴为您服务。我现在支持 Mermaid 图表渲染功能！
+
+以下是一个流程图示例：
+
+\`\`\`mermaid
+graph TD
+    A[开始] --> B{是否有问题?}
+    B -->|是| C[分析问题]
+    B -->|否| D[继续对话]
+    C --> E[提供解决方案]
+    E --> F[问题解决]
+    D --> G[等待新问题]
+    F --> G
+    G --> H[结束]
+\`\`\`
+
+您可以点击图表右上角的按钮来放大、缩小、全屏查看、复制代码或下载图表。左上角的切换按钮可以在图表视图和代码视图之间切换。
+
+请问有什么可以帮助您的吗？`,
         timestamp: new Date(),
       });
     },
