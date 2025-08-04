@@ -21,20 +21,64 @@
       </svg>
     </div>
 
-    <div class="message-content">
-      <!-- 用户消息保持基本格式（换行等），但不解析 Markdown -->
-      <div v-if="message.role === 'user'" class="message-text" v-html="userFormattedContent"></div>
-      <!-- AI 消息使用 Markdown 解析 -->
-      <div v-else class="message-text">
-        <div v-for="(block, index) in contentBlocks" v-bind:key="index">
+    <!-- 用户消息内容区域 -->
+
+    <div v-if="message.role === 'user'" class="message-content">
+      <div class="message-text" v-html="userFormattedContent"></div>
+    </div>
+
+    <!-- AI消息内容区域 -->
+    <div v-else class="message-content">
+      <div class="message-text">
+        <div v-for="(block, index) in contentBlocks" :key="`block-${index}`" class="content-block">
+          <!-- Mermaid图表渲染 -->
           <MermaidChart
             v-if="block.type === 'mermaid'"
-            v-bind:code="block.content"
-            v-on:copy-success="handleCopySuccess"
-            v-on:copy-error="handleCopyError"
-            v-on:download-error="handleDownloadError"
+            :code="block.content"
+            class="mermaid-block"
+            @copy-success="handleCopySuccess"
+            @copy-error="handleCopyError"
+            @download-error="handleDownloadError"
           />
-          <div v-else v-html="block.content"></div>
+
+          <!-- Markdown内容渲染 -->
+          <div v-else-if="block.type === 'markdown'" v-html="block.content" class="markdown-block"></div>
+        </div>
+      </div>
+      <!-- AI消息复制按钮 - 独占一行显示在内容下方右下角 -->
+      <div class="ai-copy-button-container">
+        <div
+          class="message-copy-button ai-copy-button"
+          @click="copyMessage"
+          :class="{ copying: messageCopyState === 'copying', success: messageCopyState === 'success' }"
+        >
+          <svg
+            v-if="messageCopyState === 'idle'"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" stroke="currentColor" stroke-width="2" fill="none" />
+            <path
+              d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+              stroke="currentColor"
+              stroke-width="2"
+              fill="none"
+            />
+          </svg>
+          <svg
+            v-else-if="messageCopyState === 'success'"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <polyline points="20,6 9,17 4,12" stroke="currentColor" stroke-width="2" fill="none" />
+          </svg>
+          <div v-else class="copy-loading"></div>
         </div>
       </div>
     </div>
@@ -57,6 +101,7 @@ import hljs from "highlight.js";
 import "highlight.js/styles/github.css";
 import DOMPurify from "dompurify";
 import MermaidChart from "./MermaidChart.vue";
+import { copyToClipboard } from "../utils/clipboard.js";
 
 export default {
   name: "MessageItem",
@@ -76,6 +121,7 @@ export default {
     return {
       // 标记是否已配置 marked
       markedConfigured: false,
+      messageCopyState: "idle", // 消息复制状态: idle, copying, success
     };
   },
   computed: {
@@ -121,35 +167,91 @@ export default {
     },
   },
   methods: {
-    // 处理 Markdown 内容
+    /**
+     * 处理Markdown内容，分离Mermaid和普通Markdown
+     * @param {string} content - 原始Markdown内容
+     * @returns {Array} 处理后的块数组
+     */
     processMarkdownContent(content) {
       const blocks = [];
+
       try {
-        // 使用 marked.use() 配置渲染器（仅一次）
+        // 1. 使用marked.lexer进行词法分析
+        const tokens = marked.lexer(content);
+
+        // 2. 分组处理tokens
+        let currentMarkdownTokens = [];
+
+        for (const token of tokens) {
+          if (token.type === "code" && token.lang === "mermaid") {
+            // 3. 处理之前累积的markdown内容
+            if (currentMarkdownTokens.length > 0) {
+              blocks.push({
+                type: "markdown",
+                content: this.processMarkdownTokens(currentMarkdownTokens),
+              });
+              currentMarkdownTokens = [];
+            }
+
+            // 4. 处理mermaid块
+            blocks.push({
+              type: "mermaid",
+              content: token.text,
+              id: this.generateUniqueId(),
+            });
+          } else {
+            // 5. 累积非mermaid内容
+            currentMarkdownTokens.push(token);
+          }
+        }
+
+        // 6. 处理剩余的markdown内容
+        if (currentMarkdownTokens.length > 0) {
+          blocks.push({
+            type: "markdown",
+            content: this.processMarkdownTokens(currentMarkdownTokens),
+          });
+        }
+
+        return blocks;
+      } catch (error) {
+        console.error("内容处理失败:", error);
+        return [
+          {
+            type: "markdown",
+            content: DOMPurify.sanitize(content.replace(/\n/g, "<br>")),
+          },
+        ];
+      }
+    },
+
+    /**
+     * 处理Markdown tokens并转换为安全的HTML
+     * @param {Array} tokens - Token数组
+     * @returns {string} 处理后的HTML字符串
+     */
+    processMarkdownTokens(tokens) {
+      try {
+        // 配置marked渲染器（仅一次）
         if (!this.markedConfigured) {
           marked.use({
             renderer: {
-              // 自定义代码块渲染 - 新版本使用 token 对象
+              // 自定义代码块渲染
               code(token) {
                 try {
-                  // 从 token 对象中获取代码和语言
                   const code = token.text || "";
                   const language = token.lang || "";
-                  // 安全的语言检查
                   const safeLang = language && typeof language === "string" ? language.trim() : "";
                   const validLanguage = safeLang && hljs.getLanguage(safeLang) ? safeLang : "plaintext";
 
-                  // 安全的代码高亮
                   let highlightedCode;
                   try {
                     highlightedCode = hljs.highlight(code, { language: validLanguage }).value;
                   } catch (highlightError) {
                     console.warn("代码高亮失败:", highlightError);
-                    // 如果高亮失败，使用原始代码但进行HTML转义
                     highlightedCode = DOMPurify.sanitize(code, { ALLOWED_TAGS: [] });
                   }
 
-                  // 安全的显示语言
                   const displayLanguage = DOMPurify.sanitize(safeLang || "text", { ALLOWED_TAGS: [] });
 
                   return `
@@ -170,18 +272,15 @@ export default {
                   `;
                 } catch (error) {
                   console.error("代码块渲染失败:", error);
-                  // 降级处理：返回安全的简单代码块
                   const safeCode = DOMPurify.sanitize(token.text || "", { ALLOWED_TAGS: [] });
                   return `<pre><code>${safeCode}</code></pre>`;
                 }
               },
 
-              // 自定义行内代码渲染 - 新版本使用 token 对象
+              // 自定义行内代码渲染
               codespan(token) {
                 try {
-                  // 从 token 对象中获取代码
                   const code = token.text || "";
-                  // 对行内代码进行安全处理
                   const safeCode = DOMPurify.sanitize(code, { ALLOWED_TAGS: [] });
                   return `<code class="inline-code">${safeCode}</code>`;
                 } catch (error) {
@@ -195,16 +294,11 @@ export default {
           this.markedConfigured = true;
         }
 
-        // 安全的Markdown解析配置
-        const result = marked.parse(content, {
-          breaks: true,
-          gfm: true,
-          // 启用更严格的解析
-          pedantic: false,
-        });
+        // 使用marked.parser将tokens转换为HTML
+        const html = marked.parser(tokens);
 
-        // 使用DOMPurify进行最终的安全清理，允许常见的格式化标签
-        const sanitizedResult = DOMPurify.sanitize(result, {
+        // 使用DOMPurify进行安全处理
+        return DOMPurify.sanitize(html, {
           ALLOWED_TAGS: [
             "p",
             "br",
@@ -263,17 +357,20 @@ export default {
             "d",
             "points",
           ],
-          ALLOW_DATA_ATTR: false,
         });
-
-        blocks.push({ type: "markdown", content: sanitizedResult });
-        return blocks;
       } catch (error) {
-        console.error("Markdown解析失败:", error);
-        // 降级处理：返回原始文本，但进行安全清理
-        const safeContent = DOMPurify.sanitize(content, { ALLOWED_TAGS: [] });
-        return safeContent.replace(/\n/g, "<br>");
+        console.error("Markdown tokens处理失败:", error);
+        // 降级处理：返回安全的简单文本
+        return DOMPurify.sanitize(tokens.map((t) => t.raw || "").join(""), { ALLOWED_TAGS: [] }).replace(/\n/g, "<br>");
       }
+    },
+
+    /**
+     * 生成唯一的Mermaid图表ID
+     * @returns {string} 唯一标识符
+     */
+    generateUniqueId() {
+      return `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     },
 
     // 处理复制成功事件
@@ -292,6 +389,44 @@ export default {
     handleDownloadError(error) {
       console.error("下载失败:", error);
       // 可以在这里添加错误提示
+    },
+
+    // 复制消息内容到剪贴板
+    async copyMessage() {
+      if (this.messageCopyState === "copying") return;
+
+      this.messageCopyState = "copying";
+
+      try {
+        const success = await copyToClipboard(this.message.content);
+        if (success) {
+          this.messageCopyState = "success";
+          this.$emit("copy-success", "消息已复制到剪贴板");
+
+          // 2秒后重置状态
+          setTimeout(() => {
+            this.messageCopyState = "idle";
+          }, 2000);
+        } else {
+          throw new Error("复制失败");
+        }
+      } catch (error) {
+        console.error("复制消息失败:", error);
+        this.messageCopyState = "idle";
+        this.$emit("copy-error", "复制失败，请重试");
+      }
+    },
+    // 处理鼠标进入
+    handleMouseEnter() {
+      if (this.message.role === "user") {
+        this.isHovered = true;
+      }
+    },
+    // 处理鼠标离开
+    handleMouseLeave() {
+      if (this.message.role === "user") {
+        this.isHovered = false;
+      }
     },
   },
   mounted() {
@@ -493,6 +628,109 @@ export default {
   font-size: 0.9em;
 }
 
+/* 内容块样式 */
+.message-text :deep(.content-block) {
+  margin-bottom: 16px;
+}
+
+.message-text :deep(.content-block:last-child) {
+  margin-bottom: 0;
+}
+
+.message-text :deep(.mermaid-block) {
+  margin: 16px 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e1e8ed;
+  background: #f8f9fa;
+}
+
+.message-text :deep(.markdown-block) {
+  /* 继承现有的markdown样式 */
+}
+
+/* 消息复制按钮样式 */
+.message-copy-button {
+  position: absolute;
+  top: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e1e5e9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #666;
+  backdrop-filter: blur(4px);
+  z-index: 10;
+}
+
+/* AI消息复制按钮容器 - 独占一行右对齐 */
+.ai-copy-button-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+
+/* AI消息复制按钮 - 右下角 */
+.ai-copy-button {
+  position: static;
+  margin: 0;
+}
+
+.message-copy-button:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: #667eea;
+  color: #667eea;
+  transform: scale(1.05);
+}
+
+.message-copy-button.copying {
+  color: #ffa500;
+  cursor: not-allowed;
+}
+
+.message-copy-button.success {
+  color: #52c41a;
+  background: rgba(82, 196, 26, 0.1);
+  border-color: #52c41a;
+}
+
+.copy-loading {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #ffa500;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* 消息内容相对定位以支持绝对定位的复制按钮 */
+.message-content {
+  position: relative;
+}
+
+/* AI消息固定复制按钮样式调整 */
+.fixed-copy-button {
+  opacity: 0.8;
+}
+
+.fixed-copy-button:hover {
+  opacity: 1;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .message-content {
@@ -511,6 +749,25 @@ export default {
   .message-text :deep(.code-block pre) {
     padding: 12px;
     font-size: 13px;
+  }
+
+  .message-text :deep(.content-block) {
+    margin-bottom: 12px;
+  }
+
+  .message-text :deep(.mermaid-block) {
+    margin: 12px 0;
+  }
+
+  .message-copy-button {
+    width: 28px;
+    height: 28px;
+    top: 6px;
+  }
+
+  .ai-copy-button-container {
+    margin-top: 6px;
+    padding-top: 6px;
   }
 }
 </style>

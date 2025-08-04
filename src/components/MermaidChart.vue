@@ -84,10 +84,10 @@
         <div class="loading-spinner"></div>
         <span>正在渲染图表...</span>
       </div>
-      <div v-else-if="hasError" class="error-state">
+      <!-- <div v-else-if="hasError" class="error-state">
         <div class="error-icon">⚠️</div>
         <div class="error-message">{{ errorMessage }}</div>
-      </div>
+      </div> -->
       <div
         v-else
         ref="chartContainer"
@@ -198,16 +198,16 @@ export default {
       if (!this.mermaidCode) return;
 
       this.isLoading = true;
-      this.hasError = false;
-      this.errorMessage = "";
+      // this.hasError = false;
+      // this.errorMessage = "";
 
       try {
         const { svg } = await mermaid.render(this.chartId, this.mermaidCode);
         this.renderedChart = svg;
       } catch (error) {
-        console.error("Mermaid渲染失败:", error);
-        this.hasError = true;
-        this.errorMessage = "图表渲染失败，请检查语法是否正确";
+        // console.error("Mermaid渲染失败:", error);
+        // this.hasError = true;
+        // this.errorMessage = "图表渲染失败，请检查语法是否正确";
       } finally {
         this.isLoading = false;
       }
@@ -329,27 +329,51 @@ export default {
 
         if (!svg) return;
 
-        // 获取SVG的尺寸
-        const svgData = new XMLSerializer().serializeToString(svg);
+        // 获取SVG的原始尺寸
+        const svgRect = svg.getBoundingClientRect();
+        const originalWidth = svg.viewBox?.baseVal?.width || svgRect.width || 800;
+        const originalHeight = svg.viewBox?.baseVal?.height || svgRect.height || 600;
+
+        // 设置高分辨率缩放比例（3倍分辨率）
+        const scale = 3;
+        const highResWidth = originalWidth * scale;
+        const highResHeight = originalHeight * scale;
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d");
+
+        // 设置高分辨率canvas尺寸
+        canvas.width = highResWidth;
+        canvas.height = highResHeight;
+
+        // 启用图像平滑以获得更好的质量
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+
         const img = new Image();
 
         img.onload = () => {
-          canvas.width = img.width;
-          canvas.height = img.height;
+          // 填充白色背景
           ctx.fillStyle = "#ffffff";
           ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(img, 0, 0);
 
-          // 下载图片
+          // 以高分辨率绘制图像
+          ctx.drawImage(img, 0, 0, highResWidth, highResHeight);
+
+          // 下载高质量图片
           const link = document.createElement("a");
-          link.download = `mermaid-chart-${Date.now()}.png`;
-          link.href = canvas.toDataURL("image/png");
+          link.download = `mermaid-chart-${Date.now()}-hd.png`;
+          // 使用最高质量设置导出PNG
+          link.href = canvas.toDataURL("image/png", 1.0);
           link.click();
         };
 
-        img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+        // 设置SVG的尺寸属性以确保正确缩放
+        const modifiedSvg = svg.cloneNode(true);
+        modifiedSvg.setAttribute("width", originalWidth);
+        modifiedSvg.setAttribute("height", originalHeight);
+        const modifiedSvgData = new XMLSerializer().serializeToString(modifiedSvg);
+
+        img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(modifiedSvgData)));
       } catch (error) {
         console.error("下载失败:", error);
         this.$emit("download-error", "下载失败，请重试");
