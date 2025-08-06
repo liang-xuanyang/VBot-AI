@@ -5,7 +5,7 @@
 
     <!-- 聊天界面 -->
     <div v-else class="chat-container">
-      <ChatHeader @reset-api-key="handleResetApiKey" />
+      <ChatHeader :current-model="currentModel" @reset-api-key="handleResetApiKey" @model-change="handleModelChange" />
 
       <ChatMessages :messages="messages" :is-loading="isLoading" ref="chatMessages" />
 
@@ -35,6 +35,7 @@ export default {
       apiKey: storage.getApiKey(),
       messages: [],
       isLoading: false,
+      currentModel: storage.getSelectedModel(),
     };
   },
   methods: {
@@ -47,6 +48,22 @@ export default {
       this.apiKey = "";
       this.messages = [];
       storage.removeApiKey();
+    },
+    handleModelChange(newModel) {
+      this.currentModel = newModel;
+      storage.setSelectedModel(newModel);
+      apiService.setModel(newModel);
+
+      // 添加模型切换提示消息
+      const modelName = newModel === "deepseek-chat" ? "DeepSeek V3" : "DeepSeek R1";
+      console.log(modelName);
+
+      this.messages.push({
+        role: "assistant",
+        content: `已切换到 ${modelName} 模型`,
+        timestamp: new Date(),
+      });
+      console.log(this.messages);
     },
     addWelcomeMessage() {
       this.messages.push({
@@ -110,6 +127,9 @@ export default {
     },
   },
   mounted() {
+    // 初始化模型设置
+    apiService.setModel(this.currentModel);
+
     if (this.apiKey) {
       this.addWelcomeMessage();
     }

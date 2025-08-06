@@ -1,7 +1,34 @@
 <template>
   <div class="config-container">
     <div class="config-card">
-      <h1>🤖 AI 对话助手</h1>
+      <div class="logo-container">
+        <svg class="logo" width="120" height="120" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Vue.js V形状 -->
+          <path d="M6 4L16 24L26 4H20L16 14L12 4H6Z" fill="#4FC08D" />
+          <!-- AI机器人头部 -->
+          <rect
+            x="10"
+            y="8"
+            width="12"
+            height="8"
+            rx="2"
+            fill="rgba(102,126,234,0.1)"
+            stroke="#667eea"
+            stroke-width="1"
+          />
+          <!-- 机器人眼睛 -->
+          <circle cx="13" cy="11" r="1" fill="#667eea" />
+          <circle cx="19" cy="11" r="1" fill="#667eea" />
+          <!-- 机器人嘴巴 -->
+          <path d="M14 13.5H18" stroke="#667eea" stroke-width="1" stroke-linecap="round" />
+          <!-- AI神经网络连接线 -->
+          <circle cx="8" cy="6" r="1" fill="#4FC08D" fill-opacity="0.7" />
+          <circle cx="24" cy="6" r="1" fill="#4FC08D" fill-opacity="0.7" />
+          <line x1="8" y1="6" x2="12" y2="10" stroke="#667eea" stroke-width="1" stroke-opacity="0.5" />
+          <line x1="24" y1="6" x2="20" y2="10" stroke="#667eea" stroke-width="1" stroke-opacity="0.5" />
+        </svg>
+        <h1>VueBot</h1>
+      </div>
       <p class="subtitle">请配置您的 DeepSeek API Key 开始对话</p>
       <div class="input-group">
         <input
@@ -11,9 +38,7 @@
           class="api-input"
           @keyup.enter="handleSetApiKey"
         />
-        <button @click="handleSetApiKey" class="set-btn" :disabled="!inputApiKey.trim()">
-          设置
-        </button>
+        <button @click="handleSetApiKey" class="set-btn" :disabled="!inputApiKey.trim()">设置</button>
       </div>
       <div class="help-text">
         <p>💡 如何获取 API Key：</p>
@@ -27,20 +52,20 @@
 
 <script>
 export default {
-  name: 'ApiKeyConfig',
+  name: "ApiKeyConfig",
   data() {
     return {
-      inputApiKey: ''
+      inputApiKey: "",
     };
   },
   methods: {
     handleSetApiKey() {
       if (this.inputApiKey.trim()) {
-        this.$emit('api-key-set', this.inputApiKey.trim());
-        this.inputApiKey = '';
+        this.$emit("api-key-set", this.inputApiKey.trim());
+        this.inputApiKey = "";
       }
-    }
-  }
+    },
+  },
 };
 </script>
 
@@ -63,10 +88,24 @@ export default {
   text-align: center;
 }
 
+.logo-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.logo {
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+}
+
 .config-card h1 {
   font-size: 2.5em;
-  margin-bottom: 10px;
+  margin: 0;
   color: #333;
+  font-weight: 600;
+  letter-spacing: 0.5px;
 }
 
 .subtitle {
@@ -136,12 +175,22 @@ export default {
   .config-card {
     padding: 30px 20px;
   }
-  
+
+  .logo {
+    width: 44px;
+    height: 44px;
+  }
+
+  .config-card h1 {
+    font-size: 2em;
+  }
+
   .input-group {
     flex-direction: column;
   }
-  
-  .api-input, .set-btn {
+
+  .api-input,
+  .set-btn {
     width: 100%;
   }
 }

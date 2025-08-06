@@ -4,6 +4,21 @@ class ApiService {
     this.model = "deepseek-chat";
   }
 
+  // 设置模型
+  setModel(modelName) {
+    if (modelName === "deepseek-chat" || modelName === "deepseek-reasoner") {
+      this.model = modelName;
+      console.log(`模型已切换到: ${modelName}`);
+    } else {
+      console.warn(`不支持的模型: ${modelName}`);
+    }
+  }
+
+  // 获取当前模型
+  getModel() {
+    return this.model;
+  }
+
   async sendMessageStream(apiKey, messages, onChunk, onComplete, onError) {
     try {
       const response = await fetch(`${this.baseURL}/chat/completions`, {

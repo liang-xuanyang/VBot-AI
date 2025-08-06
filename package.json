@@ -1,7 +1,7 @@
 {
-  "name": "vue-chat-ai",
+  "name": "vuebot",
   "version": "1.0.0",
-  "description": "Vue2 AI Chat Application with DeepSeek API",
+  "description": "VueBot - Vue2 AI Chat Application with DeepSeek API",
   "main": "index.js",
   "scripts": {
     "dev": "webpack-dev-server --mode development --open",
