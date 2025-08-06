@@ -19,7 +19,7 @@ class ApiService {
     return this.model;
   }
 
-  async sendMessageStream(apiKey, messages, onChunk, onComplete, onError) {
+  async sendMessageStream(apiKey, messages, onChunk, onComplete, onError, onReasoning) {
     try {
       const response = await fetch(`${this.baseURL}/chat/completions`, {
         method: "POST",
@@ -39,8 +39,6 @@ class ApiService {
               content: msg.content,
             })),
           ],
-          max_tokens: 2000,
-          temperature: 0.7,
           stream: true,
         }),
       });
@@ -93,10 +91,16 @@ class ApiService {
                 const jsonStr = trimmedLine.slice(6);
                 const data = JSON.parse(jsonStr);
 
-                if (data.choices && data.choices[0] && data.choices[0].delta) {
+                if (data.choices?.[0]?.delta?.content) {
                   const content = data.choices[0].delta.content;
                   if (content) {
                     onChunk(content);
+                  }
+                }
+                if (data.choices?.[0]?.delta?.reasoning_content) {
+                  const reasoning_content = data.choices[0].delta.reasoning_content;
+                  if (reasoning_content && onReasoning && this.model === "deepseek-reasoner") {
+                    onReasoning(reasoning_content);
                   }
                 }
               } catch (parseError) {

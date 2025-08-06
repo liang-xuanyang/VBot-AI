@@ -1,4 +1,4 @@
-# Vue Chat AI
+# Vue Bot AI
 
 一个基于 Vue 2 和 DeepSeek API 的现代化 AI 聊天应用。
 

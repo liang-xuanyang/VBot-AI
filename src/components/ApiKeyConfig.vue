@@ -2,31 +2,8 @@
   <div class="config-container">
     <div class="config-card">
       <div class="logo-container">
-        <svg class="logo" width="120" height="120" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- Vue.js V形状 -->
-          <path d="M6 4L16 24L26 4H20L16 14L12 4H6Z" fill="#4FC08D" />
-          <!-- AI机器人头部 -->
-          <rect
-            x="10"
-            y="8"
-            width="12"
-            height="8"
-            rx="2"
-            fill="rgba(102,126,234,0.1)"
-            stroke="#667eea"
-            stroke-width="1"
-          />
-          <!-- 机器人眼睛 -->
-          <circle cx="13" cy="11" r="1" fill="#667eea" />
-          <circle cx="19" cy="11" r="1" fill="#667eea" />
-          <!-- 机器人嘴巴 -->
-          <path d="M14 13.5H18" stroke="#667eea" stroke-width="1" stroke-linecap="round" />
-          <!-- AI神经网络连接线 -->
-          <circle cx="8" cy="6" r="1" fill="#4FC08D" fill-opacity="0.7" />
-          <circle cx="24" cy="6" r="1" fill="#4FC08D" fill-opacity="0.7" />
-          <line x1="8" y1="6" x2="12" y2="10" stroke="#667eea" stroke-width="1" stroke-opacity="0.5" />
-          <line x1="24" y1="6" x2="20" y2="10" stroke="#667eea" stroke-width="1" stroke-opacity="0.5" />
-        </svg>
+        <img style="width: 120px; height: 120px" src="/favicon.svg" alt="VueBot" class="logo" />
+
         <h1>VueBot</h1>
       </div>
       <p class="subtitle">请配置您的 DeepSeek API Key 开始对话</p>

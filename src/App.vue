@@ -82,6 +82,10 @@ export default {
       this.messages.push(userMessage);
       this.isLoading = true;
 
+      // 记录思考开始时间
+      let thinkingStartTime = null;
+      const isReasonerModel = this.currentModel === "deepseek-reasoner";
+
       // 使用流式请求
       apiService.sendMessageStream(
         this.apiKey,
@@ -93,6 +97,11 @@ export default {
               role: "assistant",
               content: chunk,
               timestamp: new Date(),
+              // 扩展消息对象结构
+              reasoning: "", // 推理过程内容
+              thinkingTime: 0, // 思考用时（秒）
+              isThinkingComplete: false, // 思考是否完成，初始为false
+              showThinking: isReasonerModel, // 是否显示思考功能
             };
             this.messages.push(aiMessage);
             this.isLoading = false;
@@ -105,6 +114,18 @@ export default {
         () => {
           // 流式传输完成
           this.isLoading = false;
+
+          // 如果是推理模型，标记思考完成并计算用时
+          if (isReasonerModel && this.messages.length > 0) {
+            const lastIndex = this.messages.length - 1;
+            const lastMessage = this.messages[lastIndex];
+            if (lastMessage.role === "assistant") {
+              lastMessage.isThinkingComplete = true;
+              if (thinkingStartTime) {
+                lastMessage.thinkingTime = Math.round((Date.now() - thinkingStartTime) / 1000);
+              }
+            }
+          }
         },
         (error) => {
           // 处理错误
@@ -114,14 +135,52 @@ export default {
               role: "assistant",
               content: error,
               timestamp: new Date(),
+              reasoning: "",
+              thinkingTime: 0,
+              isThinkingComplete: true,
+              showThinking: false,
             };
             this.messages.push(errorMessage);
           } else {
             // 否则更新最后一条消息
             const lastIndex = this.messages.length - 1;
             this.messages[lastIndex].content = error;
+            this.messages[lastIndex].isThinkingComplete = true;
           }
           this.isLoading = false;
+        },
+        // 新增推理内容处理回调
+        (reasoningChunk) => {
+          console.log("reasoningChunk----", reasoningChunk);
+
+          if (!thinkingStartTime) {
+            thinkingStartTime = Date.now();
+          }
+
+          // 如果还没有创建AI消息，先创建一个
+          if (this.isLoading) {
+            const aiMessage = {
+              role: "assistant",
+              content: "",
+              timestamp: new Date(),
+              // 扩展消息对象结构
+              reasoning: reasoningChunk, // 推理过程内容
+              thinkingTime: 0, // 思考用时（秒）
+              isThinkingComplete: false, // 思考是否完成，初始为false
+              showThinking: isReasonerModel, // 是否显示思考功能
+            };
+            this.messages.push(aiMessage);
+            this.isLoading = false;
+          } else {
+            // 更新最后一条AI消息的推理内容
+            if (this.messages.length > 0) {
+              const lastIndex = this.messages.length - 1;
+              const lastMessage = this.messages[lastIndex];
+              if (lastMessage.role === "assistant") {
+                lastMessage.reasoning += reasoningChunk;
+              }
+            }
+          }
         }
       );
     },

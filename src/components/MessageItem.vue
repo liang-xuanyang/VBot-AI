@@ -22,13 +22,21 @@
     </div>
 
     <!-- 用户消息内容区域 -->
-
     <div v-if="message.role === 'user'" class="message-content">
       <div class="message-text" v-html="userFormattedContent"></div>
     </div>
 
     <!-- AI消息内容区域 -->
     <div v-else class="message-content">
+      <!-- 深度思考显示组件 -->
+      <ThinkingDisplay
+        v-if="message.showThinking"
+        :reasoning-content="message.reasoning || ''"
+        :is-thinking-complete="message.isThinkingComplete || false"
+        :thinking-time="message.thinkingTime || 0"
+        :show-thinking="message.showThinking || false"
+      />
+
       <div class="message-text">
         <div v-for="(block, index) in contentBlocks" :key="`block-${index}`" class="content-block">
           <!-- Mermaid图表渲染 -->
@@ -101,12 +109,14 @@ import hljs from "highlight.js";
 import "highlight.js/styles/github.css";
 import DOMPurify from "dompurify";
 import MermaidChart from "./MermaidChart.vue";
+import ThinkingDisplay from "./ThinkingDisplay.vue";
 import { copyToClipboard } from "../utils/clipboard.js";
 
 export default {
   name: "MessageItem",
   components: {
     MermaidChart,
+    ThinkingDisplay,
   },
   props: {
     message: {
