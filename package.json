@@ -1,6 +1,6 @@
 {
   "name": "vuebot",
-  "version": "1.0.0",
+  "version": "1.4.0",
   "description": "VueBot - Vue2 AI Chat Application with DeepSeek API",
   "main": "index.js",
   "scripts": {

@@ -168,6 +168,7 @@ export default {
     initMermaid() {
       mermaid.initialize({
         startOnLoad: false,
+        securityLevel: "loose",
         theme: "default",
         themeVariables: {
           primaryColor: "#c7d2fe",
@@ -202,8 +203,11 @@ export default {
       // this.errorMessage = "";
 
       try {
-        const { svg } = await mermaid.render(this.chartId, this.mermaidCode);
-        this.renderedChart = svg;
+        const result = await mermaid.parse(this.mermaidCode);
+        if (result) {
+          const { svg } = await mermaid.render(this.chartId, this.mermaidCode);
+          this.renderedChart = svg;
+        }
       } catch (error) {
         // console.error("Mermaid渲染失败:", error);
         // this.hasError = true;
