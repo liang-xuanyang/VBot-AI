@@ -115,6 +115,7 @@
 
 <script>
 import mermaid from "mermaid";
+import { mermaidConfig } from "./mermaidConfig";
 
 export default {
   name: "MermaidChart",
@@ -166,34 +167,7 @@ export default {
   },
   methods: {
     initMermaid() {
-      mermaid.initialize({
-        startOnLoad: false,
-        securityLevel: "loose",
-        theme: "default",
-        themeVariables: {
-          primaryColor: "#c7d2fe",
-          primaryTextColor: "#6366f1",
-          primaryBorderColor: "#6366f1",
-          lineColor: "#6366f1",
-          secondaryColor: "#e0e7ff",
-          tertiaryColor: "#f1f5f9",
-        },
-        flowchart: {
-          htmlLabels: true,
-          curve: "basis",
-        },
-        sequence: {
-          diagramMarginX: 50,
-          diagramMarginY: 10,
-          actorMargin: 50,
-          width: 150,
-          height: 65,
-          boxMargin: 10,
-          boxTextMargin: 5,
-          noteMargin: 10,
-          messageMargin: 35,
-        },
-      });
+      mermaid.initialize(mermaidConfig);
     },
     async renderChart() {
       if (!this.mermaidCode) return;
