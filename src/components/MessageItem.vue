@@ -193,7 +193,11 @@ export default {
         let currentMarkdownTokens = [];
 
         for (const token of tokens) {
-          if (token.type === "code" && token.lang === "mermaid") {
+          if (
+            token.type === "code" &&
+            typeof token.lang === "string" &&
+            token.lang.trim().split(/\s+/, 1)[0].toLowerCase() === "mermaid"
+          ) {
             // 3. 处理之前累积的markdown内容
             if (currentMarkdownTokens.length > 0) {
               blocks.push({
@@ -251,6 +255,9 @@ export default {
                 try {
                   const code = token.text || "";
                   const language = token.lang || "";
+                  console.log("原始语言:", language);
+                  console.log("原始代码:", code);
+
                   const safeLang = language && typeof language === "string" ? language.trim() : "";
                   const validLanguage = safeLang && hljs.getLanguage(safeLang) ? safeLang : "plaintext";
 
