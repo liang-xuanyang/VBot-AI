@@ -1,3 +1,5 @@
+import { systemPrompt } from '../config/configLoader';
+
 class ApiService {
   constructor() {
     this.baseURL = "https://api.deepseek.com";
@@ -32,8 +34,7 @@ class ApiService {
           messages: [
             {
               role: "system",
-              content:
-                "你是一个有用的AI助手，请用中文回答问题。当生成了包含代码块的代码块时，外层使用四个反引号（````）包围，内层保持三个反引号（```）不变，单层代码块仍用标准的三个反引号（```）包裹。",
+              content: systemPrompt,
             },
             ...messages.slice(-10).map((msg) => ({
               role: msg.role,

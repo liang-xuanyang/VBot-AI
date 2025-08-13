@@ -2,9 +2,9 @@
   <div class="config-container">
     <div class="config-card">
       <div class="logo-container">
-        <img style="width: 120px; height: 120px" src="/favicon.svg" alt="VueBot" class="logo" />
+        <img style="width: 120px; height: 120px" src="/favicon.svg" alt="VBot AI" class="logo" />
 
-        <h1>VueBot</h1>
+        <h1>VBot AI</h1>
       </div>
       <p class="subtitle">请配置您的 DeepSeek API Key 开始对话</p>
       <div class="input-group">

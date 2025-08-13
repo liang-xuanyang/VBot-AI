@@ -44,6 +44,10 @@ module.exports = {
           from: "public/favicon.svg",
           to: "favicon.svg",
         },
+        {
+          from: "src/config/systemPrompts.yaml",
+          to: "src/config/systemPrompts.yaml",
+        },
       ],
     }),
   ],

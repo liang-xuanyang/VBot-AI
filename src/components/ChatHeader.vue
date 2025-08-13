@@ -1,9 +1,9 @@
 <template>
   <div class="chat-header">
     <div class="logo-container">
-      <img style="width: 42px; height: 42px" src="/favicon.svg" alt="VueBot" class="logo" />
+      <img style="width: 42px; height: 42px" src="/favicon.svg" alt="VBot AI" class="logo" />
 
-      <h1>VueBot</h1>
+      <h1>VBot AI</h1>
     </div>
     <div class="header-controls">
       <div class="model-selector">

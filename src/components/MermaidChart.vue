@@ -1,22 +1,18 @@
 <template>
-  <div v-bind:class="['mermaid-container', { fullscreen: isFullscreen }]">
+  <div :class="['mermaid-container', { fullscreen: isFullscreen }]">
     <!-- 按钮工具栏 -->
     <div class="toolbar">
       <!-- 切换按钮 - 左侧 -->
       <div class="view-toggle">
-        <button v-bind:class="['toggle-btn', { active: currentView === 'chart' }]" v-on:click="switchView('chart')">
-          图表
-        </button>
-        <button v-bind:class="['toggle-btn', { active: currentView === 'code' }]" v-on:click="switchView('code')">
-          代码
-        </button>
+        <button :class="['toggle-btn', { active: currentView === 'chart' }]" @click="switchView('chart')">图表</button>
+        <button :class="['toggle-btn', { active: currentView === 'code' }]" @click="switchView('code')">代码</button>
       </div>
 
       <!-- 操作按钮 - 右侧 -->
       <div class="action-buttons">
         <!-- 图表视图时显示的按钮 -->
         <template v-if="currentView === 'chart'">
-          <button class="action-btn" v-on:click="zoomIn" title="放大">
+          <button class="action-btn" @click="zoomIn" title="放大">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="11" cy="11" r="8"></circle>
               <path d="m21 21-4.35-4.35"></path>
@@ -24,14 +20,14 @@
               <line x1="8" y1="11" x2="14" y2="11"></line>
             </svg>
           </button>
-          <button class="action-btn" v-on:click="zoomOut" title="缩小">
+          <button class="action-btn" @click="zoomOut" title="缩小">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="11" cy="11" r="8"></circle>
               <path d="m21 21-4.35-4.35"></path>
               <line x1="8" y1="11" x2="14" y2="11"></line>
             </svg>
           </button>
-          <button class="action-btn" v-on:click="resetTransform" title="重置视图">
+          <button class="action-btn" @click="resetTransform" title="重置视图">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
               <path d="M21 3v5h-5"></path>
@@ -39,7 +35,7 @@
               <path d="M3 21v-5h5"></path>
             </svg>
           </button>
-          <button class="action-btn" v-on:click="toggleFullscreen" v-bind:title="isFullscreen ? '退出全屏' : '全屏'">
+          <button class="action-btn" @click="toggleFullscreen" :title="isFullscreen ? '退出全屏' : '全屏'">
             <svg
               v-if="!isFullscreen"
               width="16"
@@ -62,13 +58,13 @@
         </template>
 
         <!-- 所有视图都显示的按钮 -->
-        <button class="action-btn" v-on:click="copyCode" title="复制代码">
+        <button class="action-btn" @click="copyCode" title="复制代码">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
           </svg>
         </button>
-        <button class="action-btn" v-on:click="downloadChart" title="下载图表">
+        <button class="action-btn" @click="downloadChart" title="下载图表">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
             <polyline points="7,10 12,15 17,10"></polyline>
@@ -92,12 +88,12 @@
         v-else
         ref="chartContainer"
         class="chart-container"
-        v-on:wheel="handleWheel"
-        v-on:mousedown="handleMouseDown"
-        v-on:mousemove="handleMouseMove"
-        v-on:mouseup="handleMouseUp"
-        v-on:mouseleave="handleMouseLeave"
-        v-bind:style="{
+        @wheel="handleWheel"
+        @mousedown="handleMouseDown"
+        @mousemove="handleMouseMove"
+        @mouseup="handleMouseUp"
+        @mouseleave="handleMouseLeave"
+        :style="{
           transform: 'scale(' + zoomLevel + ') translate(' + translateX + 'px, ' + translateY + 'px)',
           transformOrigin: 'center center',
           cursor: isDragging ? 'grabbing' : 'grab',
