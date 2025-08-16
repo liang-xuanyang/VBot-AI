@@ -107,7 +107,14 @@
 import { marked } from "marked";
 import hljs from "highlight.js";
 import "highlight.js/styles/github.css";
+// 导入Vue语言支持
+import vue from "highlight.js/lib/languages/xml"; // Vue使用XML语法
+
 import DOMPurify from "dompurify";
+
+// 注册语言
+hljs.registerLanguage("vue", vue);
+
 import MermaidChart from "./MermaidChart.vue";
 import ThinkingDisplay from "./ThinkingDisplay.vue";
 import { copyToClipboard } from "../utils/clipboard.js";
