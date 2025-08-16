@@ -5,6 +5,16 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 并且本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.5.0] - 2025-08-16
+
+### 改进
+
+- ⚡ **Vue 语法高亮** - 集成 highlight.js，支持 Vue 语法高亮显示
+
+### 修复
+
+- **Mermaid 图表渲染** - 修复 Mermaid 图表在某些情况下的渲染问题
+
 ## [1.4.0] - 2025-08-08
 
 ### 改进

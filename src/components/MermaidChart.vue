@@ -167,11 +167,7 @@ export default {
     },
     async renderChart() {
       if (!this.mermaidCode) return;
-
       this.isLoading = true;
-      // this.hasError = false;
-      // this.errorMessage = "";
-
       try {
         const result = await mermaid.parse(this.mermaidCode);
         if (result) {
@@ -179,11 +175,10 @@ export default {
           this.renderedChart = svg;
         }
       } catch (error) {
-        // console.error("Mermaid渲染失败:", error);
-        // this.hasError = true;
-        // this.errorMessage = "图表渲染失败，请检查语法是否正确";
       } finally {
         this.isLoading = false;
+        // 清理可能被mermaid添加到body的错误元素
+        this.cleanupMermaidErrorElements();
       }
     },
     switchView(view) {
@@ -292,6 +287,51 @@ export default {
         this.$emit("copy-error", "复制失败，请手动复制");
       }
     },
+    cleanupMermaidErrorElements() {
+      // 清理mermaid可能添加到body末尾的错误元素
+      try {
+        // 查找所有可能的mermaid错误元素
+        const errorSelectors = [
+          'div[id^="mermaid-"]',
+          'div[id^="d"]', // mermaid有时会生成以d开头的id
+          'svg[id^="mermaid-"]'
+        ];
+        
+        errorSelectors.forEach(selector => {
+          const elements = document.querySelectorAll(selector);
+          elements.forEach(element => {
+            // 检查是否包含错误信息
+            const textContent = element.textContent || '';
+            const innerHTML = element.innerHTML || '';
+            
+            if (textContent.includes('Syntax error') || 
+                textContent.includes('syntax error') ||
+                innerHTML.includes('Syntax error') ||
+                innerHTML.includes('syntax error')) {
+              // 移除错误元素
+              if (element.parentNode === document.body) {
+                document.body.removeChild(element);
+              } else if (element.parentElement) {
+                element.parentElement.removeChild(element);
+              }
+            }
+          });
+        });
+        
+        // 额外清理：查找直接添加到body的孤立div元素
+        const bodyChildren = Array.from(document.body.children);
+        bodyChildren.forEach(child => {
+          if (child.tagName === 'DIV' && 
+              child.id && 
+              (child.id.startsWith('mermaid-') || child.id.startsWith('d')) &&
+              (child.textContent?.includes('Syntax error') || child.textContent?.includes('syntax error'))) {
+            document.body.removeChild(child);
+          }
+        });
+      } catch (cleanupError) {
+         console.warn('清理mermaid错误元素时出错:', cleanupError);
+       }
+     },
     downloadChart() {
       if (!this.renderedChart) return;
 

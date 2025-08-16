@@ -1,6 +1,6 @@
 {
   "name": "VBot AI",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "VBot AI - Vue2 AI Chat Application with DeepSeek API",
   "main": "index.js",
   "scripts": {
