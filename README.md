@@ -23,8 +23,8 @@
 ### 克隆项目
 
 ```bash
-git clone https://gitclone.com/github.com/liang-xuanyang/vue-chat.git
-cd vue-chat
+git clone https://github.com/liang-xuanyang/VBot-AI.git
+cd VBot-AI
 ```
 
 ### 安装依赖
