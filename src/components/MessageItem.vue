@@ -53,12 +53,25 @@
           <div v-else-if="block.type === 'markdown'" v-html="block.content" class="markdown-block"></div>
         </div>
       </div>
-      <!-- AI消息复制按钮 - 独占一行显示在内容下方右下角 -->
-      <div class="ai-copy-button-container">
+      <!-- AI消息操作按钮 - 独占一行显示在内容下方右下角 -->
+      <div class="ai-action-buttons-container">
+        <!-- 分享按钮 -->
+        <div class="message-action-button ai-share-button" @click="openShareDialog" title="分享消息">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2" fill="none" />
+            <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2" fill="none" />
+            <circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="2" fill="none" />
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="currentColor" stroke-width="2" />
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="currentColor" stroke-width="2" />
+          </svg>
+        </div>
+
+        <!-- 复制按钮 -->
         <div
-          class="message-copy-button ai-copy-button"
+          class="message-action-button ai-copy-button"
           @click="copyMessage"
           :class="{ copying: messageCopyState === 'copying', success: messageCopyState === 'success' }"
+          title="复制消息"
         >
           <svg
             v-if="messageCopyState === 'idle'"
@@ -100,6 +113,14 @@
         />
       </svg>
     </div>
+
+    <!-- 分享对话框 -->
+    <ShareDialog
+      :visible="showShareDialog"
+      :message="message"
+      :messages="$parent.messages || []"
+      @close="closeShareDialog"
+    />
   </div>
 </template>
 
@@ -117,6 +138,7 @@ hljs.registerLanguage("vue", vue);
 
 import MermaidChart from "./MermaidChart.vue";
 import ThinkingDisplay from "./ThinkingDisplay.vue";
+import ShareDialog from "./ShareDialog.vue";
 import { copyToClipboard } from "../utils/clipboard.js";
 
 export default {
@@ -124,6 +146,7 @@ export default {
   components: {
     MermaidChart,
     ThinkingDisplay,
+    ShareDialog,
   },
   props: {
     message: {
@@ -139,6 +162,7 @@ export default {
       // 标记是否已配置 marked
       markedConfigured: false,
       messageCopyState: "idle", // 消息复制状态: idle, copying, success
+      showShareDialog: false, // 控制分享对话框显示
     };
   },
   computed: {
@@ -452,6 +476,16 @@ export default {
         this.isHovered = false;
       }
     },
+
+    // 打开分享对话框
+    openShareDialog() {
+      this.showShareDialog = true;
+    },
+
+    // 关闭分享对话框
+    closeShareDialog() {
+      this.showShareDialog = false;
+    },
   },
   mounted() {
     // 添加全局复制函数
@@ -673,8 +707,8 @@ export default {
   /* 继承现有的markdown样式 */
 }
 
-/* 消息复制按钮样式 */
-.message-copy-button {
+/* 消息操作按钮样式 */
+.message-action-button {
   position: absolute;
   top: 8px;
   width: 32px;
@@ -692,32 +726,34 @@ export default {
   z-index: 10;
 }
 
-/* AI消息复制按钮容器 - 独占一行右对齐 */
-.ai-copy-button-container {
+/* AI消息操作按钮容器 - 独占一行右对齐 */
+.ai-action-buttons-container {
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
   margin-bottom: 10px;
 }
 
-/* AI消息复制按钮 - 右下角 */
-.ai-copy-button {
+/* AI消息操作按钮 - 右下角 */
+.ai-copy-button,
+.ai-share-button {
   position: static;
   margin: 0;
 }
 
-.message-copy-button:hover {
+.message-action-button:hover {
   background: rgba(255, 255, 255, 0.95);
   border-color: #667eea;
   color: #667eea;
   transform: scale(1.05);
 }
 
-.message-copy-button.copying {
+.message-action-button.copying {
   color: #ffa500;
   cursor: not-allowed;
 }
 
-.message-copy-button.success {
+.message-action-button.success {
   color: #52c41a;
   background: rgba(82, 196, 26, 0.1);
   border-color: #52c41a;
@@ -783,15 +819,16 @@ export default {
     margin: 12px 0;
   }
 
-  .message-copy-button {
+  .message-action-button {
     width: 28px;
     height: 28px;
     top: 6px;
   }
 
-  .ai-copy-button-container {
+  .ai-action-buttons-container {
     margin-top: 6px;
     padding-top: 6px;
+    gap: 6px;
   }
 }
 </style>

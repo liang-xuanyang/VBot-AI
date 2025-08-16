@@ -1,7 +1,7 @@
 <template>
   <div class="chat-header">
     <div class="logo-container">
-      <img style="width: 42px; height: 42px" src="/favicon.svg" alt="VBot AI" class="logo" />
+      <img style="width: 48px; height: 48px" src="/favicon.svg" alt="VBot AI" class="logo" />
 
       <h1>VBot AI</h1>
     </div>
